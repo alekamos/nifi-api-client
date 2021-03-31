@@ -80,8 +80,6 @@ public class ApiClient {
      */
     public ApiClient() {
         httpClient = new OkHttpClient();
-
-
         verifyingSsl = true;
 
         json = new JSON();
@@ -93,7 +91,30 @@ public class ApiClient {
         authentications = new HashMap<String, Authentication>();
         // Prevent the authentications from being modified.
         authentications = Collections.unmodifiableMap(authentications);
+
     }
+
+
+    public ApiClient(String token) {
+        httpClient = new OkHttpClient();
+        verifyingSsl = true;
+
+        json = new JSON();
+
+        // Set default User-Agent.
+        setUserAgent("Swagger-Codegen/1.0.0/java");
+
+        // Setup authentications (key: authentication name, value: authentication).
+        authentications = new HashMap<String, Authentication>();
+        OAuth oAuth = new OAuth();
+        oAuth.setAccessToken(token);
+        // Prevent the authentications from being modified.
+        authentications.put("oAuth",oAuth);
+
+    }
+
+
+
 
     /**
      * Get base path
@@ -601,8 +622,8 @@ public class ApiClient {
      * @return True if the given MIME is JSON, false otherwise.
      */
     public boolean isJsonMime(String mime) {
-      String jsonMime = "(?i)^(application/json|[^;/ \t]+/[^;/ \t]+[+]json)[ \t]*(;.*)?$";
-      return mime != null && (mime.matches(jsonMime) || mime.equals("*/*"));
+        String jsonMime = "(?i)^(application/json|[^;/ \t]+/[^;/ \t]+[+]json)[ \t]*(;.*)?$";
+        return mime != null && (mime.matches(jsonMime) || mime.equals("*/*"));
     }
 
     /**
@@ -637,7 +658,7 @@ public class ApiClient {
      */
     public String selectHeaderContentType(String[] contentTypes) {
         if (contentTypes.length == 0 || contentTypes[0].equals("*/*")) {
-             return "application/json";
+            return "application/json";
         }
         for (String contentType : contentTypes) {
             if (isJsonMime(contentType)) {
@@ -965,6 +986,13 @@ public class ApiClient {
      * @throws ApiException If fail to serialize the request body object
      */
     public Request buildRequest(String path, String method, List<Pair> queryParams, List<Pair> collectionQueryParams, Object body, Map<String, String> headerParams, Map<String, Object> formParams, String[] authNames, ProgressRequestBody.ProgressRequestListener progressRequestListener) throws ApiException {
+
+        Set<String> strings = this.authentications.keySet();
+        if(!strings.isEmpty())
+            authNames = strings.stream().toArray(n -> new String[n]);
+
+
+
         updateParamsForAuth(authNames, queryParams, headerParams);
 
         final String url = buildUrl(path, queryParams, collectionQueryParams);
@@ -1082,6 +1110,9 @@ public class ApiClient {
      * @param headerParams  Map of header parameters
      */
     public void updateParamsForAuth(String[] authNames, List<Pair> queryParams, Map<String, String> headerParams) {
+
+
+
         for (String authName : authNames) {
             Authentication auth = authentications.get(authName);
             if (auth == null) throw new RuntimeException("Authentication undefined: " + authName);
